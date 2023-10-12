@@ -10,9 +10,9 @@ Having Go installed, you can run `go run .` from the root directory to play the 
 - Up arrow - Rotate piece
 - Down arrow - Fast fall
 - Space - Instant drop
-
+- Clike - Pause
 ## Todo
 
-- [ ] Menus (Opening, game-over, pause)
+- [ ] Menus (Opening, game-over)
 - [ ] Animation for row clearing
 - [ ] Music and sound effects

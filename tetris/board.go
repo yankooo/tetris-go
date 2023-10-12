@@ -343,17 +343,17 @@ func (b *Board) displayIntroduction(win *pixelgl.Window) {
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 	scoreTxt := text.New(pixel.V(scoreTextLocX, scoreTextLocY), basicAtlas)
 	fmt.Fprintf(scoreTxt, `
-	Down : Drop faster
+	L/R arrow - Move block
 
-	Left : Move one block left
-	
-	Right: Move one block right
-	
-	Space: Drop all the way down
-	
-	Click: Pause	
+	Up arrow - Rotate block
+
+	Down arrow - Fast fall
+
+	Space - Instant drop
+
+	Clike - Pause
 	`)
-	scoreTxt.Draw(win, pixel.IM.Scaled(scoreTxt.Orig, 1.28))
+	scoreTxt.Draw(win, pixel.IM.Scaled(scoreTxt.Orig, 1.5))
 }
 
 func (b *Board) displayBG(win *pixelgl.Window) {
