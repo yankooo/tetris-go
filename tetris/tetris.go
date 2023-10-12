@@ -1,11 +1,12 @@
 package tetris
 
 import (
+	"math"
+	"time"
+
 	"github.com/faiface/pixel"
 	"github.com/faiface/pixel/pixelgl"
 	"golang.org/x/image/colornames"
-	"math"
-	"time"
 )
 
 type tetrisGame struct {
@@ -18,6 +19,8 @@ type tetrisGame struct {
 	levelUpTimer   float64
 	leftRightDelay float64
 	moveCounter    int
+
+	isPaused bool
 }
 
 func NewGame() *tetrisGame {
@@ -27,110 +30,72 @@ func NewGame() *tetrisGame {
 
 func (g *tetrisGame) Initialize() {
 	g.baseSpeed = 0.8
-	g.gravitySpeed = 0.8
-	g.levelUpTimer = levelLength
+	g.gravitySpeed = g.baseSpeed
+	g.levelUpTimer = levelLength // Assuming levelLength is initialized elsewhere
 	g.initWindows()
 
 	g.board = NewBoard()
 	g.board.initResource()
-	g.board.AddPiece() // Add initial Piece to game
+	g.board.AddPiece()
 }
 
-// Initialize the window
 func (g *tetrisGame) initWindows() {
 	var err error
 	windowWidth := 765.0
 	windowHeight := 450.0
 	cfg := pixelgl.WindowConfig{
-		Title:  "俄罗斯方块nb",
+		Title:  "俄罗斯方块",
 		Bounds: pixel.R(0, 0, windowWidth, windowHeight),
 		VSync:  true,
 	}
 	g.win, err = pixelgl.NewWindow(cfg)
 	if err != nil {
-		panic(any(err))
+		panic(err)
 	}
 }
 
-// run is the main code for the game. Allows pixelgl to run on main thread
 func (g *tetrisGame) Run() {
 	last := time.Now()
 	for !g.win.Closed() && !g.board.GameOver() {
-		// Perform time processing events
+		if g.win.JustPressed(pixelgl.MouseButtonLeft) {
+			last = g.togglePause(last)
+		}
+
+		if g.isPaused {
+			g.displayPausedMessage()
+			g.win.Update()
+			continue
+		}
+
 		dt := time.Since(last).Seconds()
 		last = time.Now()
 		g.gravityTimer += dt
 		g.levelUpTimer -= dt
 
-		// Time Functions:
-		// Gravity
 		if g.gravityTimer > g.gravitySpeed {
 			g.gravityTimer -= g.gravitySpeed
 			didCollide := g.board.applyGravity()
 			if !didCollide {
 				if g.board.isTouchingFloor() {
-					g.gravityTimer -= g.gravitySpeed // Add extra time when touching floor
+					g.gravityTimer -= g.gravitySpeed
 				}
 			} else {
 				g.board.AddScore(10)
 			}
 		}
-
 		if g.leftRightDelay > 0.0 {
 			g.leftRightDelay = math.Max(g.leftRightDelay-dt, 0.0)
 		}
 
-		// Speed up
 		if g.levelUpTimer <= 0 {
 			if g.baseSpeed > 0.2 {
-				g.baseSpeed = math.Max(g.baseSpeed-speedUpRate, 0.2)
+				g.baseSpeed = math.Max(g.baseSpeed-speedUpRate, 0.2) // Assuming speedUpRate is initialized elsewhere
 			}
 			g.levelUpTimer = levelLength
 			g.gravitySpeed = g.baseSpeed
 		}
 
-		// Keypress Functions
-		if g.win.Pressed(pixelgl.KeyRight) && g.leftRightDelay == 0.0 {
-			g.board.movePiece(1)
-			if g.moveCounter > 0 {
-				g.leftRightDelay = 0.1
-			} else {
-				g.leftRightDelay = 0.5
-			}
-			g.moveCounter++
-		}
-		if g.win.Pressed(pixelgl.KeyLeft) && g.leftRightDelay == 0.0 {
-			g.board.movePiece(-1)
-			if g.moveCounter > 0 {
-				g.leftRightDelay = 0.1
-			} else {
-				g.leftRightDelay = 0.5
-			}
-			g.moveCounter++
-		}
-		if g.win.JustPressed(pixelgl.KeyDown) {
-			g.gravitySpeed = 0.08 // TODO: Code could result in bugs if game pause functionality added
-			if g.gravityTimer > 0.08 {
-				g.gravityTimer = 0.08
-			}
-		}
-		if g.win.JustReleased(pixelgl.KeyDown) {
-			g.gravitySpeed = g.baseSpeed // TODO: Code could result in bugs if game pause functionality added
-		}
-		if g.win.JustPressed(pixelgl.KeyUp) {
-			g.board.rotatePiece()
-			if g.board.isTouchingFloor() {
-				g.gravityTimer = 0 // Make gravity more forgiving when moving pieces
-			}
-		}
-		if g.win.JustPressed(pixelgl.KeySpace) {
-			g.board.instafall()
-			g.board.AddScore(12)
-		}
-		if !g.win.Pressed(pixelgl.KeyRight) && !g.win.Pressed(pixelgl.KeyLeft) {
-			g.moveCounter = 0
-			g.leftRightDelay = 0
-		}
+		g.processKeypresses()
 
 		g.win.Clear(colornames.Black)
 		g.board.displayBG(g.win)
@@ -138,4 +103,63 @@ func (g *tetrisGame) Run() {
 		g.board.displayBoard(g.win)
 		g.win.Update()
 	}
+}
+
+// 为tetrisGame结构体添加一个新方法来处理暂停的逻辑
+func (g *tetrisGame) togglePause(last time.Time) time.Time {
+	g.isPaused = !g.isPaused
+	if !g.isPaused {
+		// 重置时间以防止dt累积
+		last = time.Now()
+	}
+	return last
+}
+
+// 显示暂停消息的方法
+func (g *tetrisGame) displayPausedMessage() {
+	g.board.displayPaused(g.win)
+}
+
+// Separated keypress handling for clarity
+func (g *tetrisGame) processKeypresses() {
+	if g.win.Pressed(pixelgl.KeyRight) && g.leftRightDelay == 0.0 {
+		g.handleHorizontalMove(1)
+	}
+	if g.win.Pressed(pixelgl.KeyLeft) && g.leftRightDelay == 0.0 {
+		g.handleHorizontalMove(-1)
+	}
+	if g.win.JustPressed(pixelgl.KeyDown) {
+		g.gravitySpeed = 0.08
+		if g.gravityTimer > 0.08 {
+			g.gravityTimer = 0.08
+		}
+	}
+	if g.win.JustReleased(pixelgl.KeyDown) {
+		g.gravitySpeed = g.baseSpeed
+	}
+	if g.win.JustPressed(pixelgl.KeyUp) {
+		g.board.rotatePiece()
+		if g.board.isTouchingFloor() {
+			g.gravityTimer = 0
+		}
+	}
+	if g.win.JustPressed(pixelgl.KeySpace) {
+		g.board.instafall()
+		g.board.AddScore(12)
+	}
+	if !g.win.Pressed(pixelgl.KeyRight) && !g.win.Pressed(pixelgl.KeyLeft) {
+		g.moveCounter = 0
+		g.leftRightDelay = 0
+	}
+}
+
+// Handle left/right movement
+func (g *tetrisGame) handleHorizontalMove(direction int) {
+	g.board.movePiece(direction)
+	if g.moveCounter > 0 {
+		g.leftRightDelay = 0.1
+	} else {
+		g.leftRightDelay = 0.5
+	}
+	g.moveCounter++
 }

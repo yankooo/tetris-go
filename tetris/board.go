@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/faiface/pixel"
+	"github.com/faiface/pixel/pixelgl"
 	"github.com/faiface/pixel/text"
 	"github.com/yankooo/tetris-go/tetris/spritesheet"
 	"golang.org/x/image/font/basicfont"
-
-	"github.com/faiface/pixel"
-	"github.com/faiface/pixel/pixelgl"
 )
 
 // Board is an array containing the entire game board pieces.
@@ -304,13 +303,26 @@ func piece2Block(p Piece) Block {
 	return GraySpecial // Return strange value value
 }
 
-func (b *Board) displayText(win *pixelgl.Window) {
+func (b *Board) displayPaused(win *pixelgl.Window) {
 	// Text Generator
+	scoreTextLocX := 315.0
+	scoreTextLocY := 215.0
+	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+	scoreTxt := text.New(pixel.V(scoreTextLocX, scoreTextLocY), basicAtlas)
+	fmt.Fprintf(scoreTxt, "Game Pause")
+	scoreTxt.Draw(win, pixel.IM.Scaled(scoreTxt.Orig, 2))
+}
+
+func (b *Board) displayText(win *pixelgl.Window) {
+	// 玩法说明
+	b.displayIntroduction(win)
+
+	// 分数
 	scoreTextLocX := 100.0
 	scoreTextLocY := 400.0
 	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
 	scoreTxt := text.New(pixel.V(scoreTextLocX, scoreTextLocY), basicAtlas)
-	fmt.Fprintf(scoreTxt, "Score:")
+	fmt.Fprintf(scoreTxt, "Score")
 	scoreTxt.Draw(win, pixel.IM.Scaled(scoreTxt.Orig, 2))
 
 	score := text.New(pixel.V(scoreTextLocX, scoreTextLocY-30), basicAtlas)
@@ -321,8 +333,27 @@ func (b *Board) displayText(win *pixelgl.Window) {
 	nextPieceTextLocY := 300.0
 	nextPieceTxt := text.New(pixel.V(nextPieceTextLocX, nextPieceTextLocY), basicAtlas)
 
-	fmt.Fprintf(nextPieceTxt, "Next Piece:")
+	fmt.Fprintf(nextPieceTxt, "Next Piece")
 	nextPieceTxt.Draw(win, pixel.IM.Scaled(scoreTxt.Orig, 2))
+}
+
+func (b *Board) displayIntroduction(win *pixelgl.Window) {
+	scoreTextLocX := 460.0
+	scoreTextLocY := 350.0
+	basicAtlas := text.NewAtlas(basicfont.Face7x13, text.ASCII)
+	scoreTxt := text.New(pixel.V(scoreTextLocX, scoreTextLocY), basicAtlas)
+	fmt.Fprintf(scoreTxt, `
+	Down : Drop faster
+
+	Left : Move one block left
+	
+	Right: Move one block right
+	
+	Space: Drop all the way down
+	
+	Click: Pause	
+	`)
+	scoreTxt.Draw(win, pixel.IM.Scaled(scoreTxt.Orig, 1.28))
 }
 
 func (b *Board) displayBG(win *pixelgl.Window) {
