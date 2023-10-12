@@ -4,6 +4,10 @@
 
 Having Go installed, you can run `go run .` from the root directory to play the game.
 
+example:
+
+![](./docs/example1.png)
+
 ## Controls
 
 - Left/Right arrow - Move piece
